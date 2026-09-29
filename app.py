@@ -44,12 +44,13 @@ def bar_h(
     x_title: str,
     tooltip: list,
     color_field: str,
+    x_axis: alt.Axis | None = None,
 ) -> alt.Chart:
     return (
         alt.Chart(data)
         .mark_bar()
         .encode(
-            x=alt.X(x, title=x_title),
+            x=alt.X(x, title=x_title, axis=x_axis),
             y=alt.Y(y, sort="-x", title=None),
             color=alt.Color(color_field, legend=None, scale=alt.Scale(scheme="tableau20")),
             tooltip=tooltip,
@@ -168,6 +169,7 @@ st.altair_chart(
         x_title="Mean rating",
         tooltip=["genre", alt.Tooltip("mean_rating:Q", format=".3f"), "n_ratings"],
         color_field="genre:N",
+        x_axis=alt.Axis(tickMinStep=0.25),
     ),
     use_container_width=True,
 )
@@ -223,16 +225,23 @@ st.caption(f"{len(eligible):,} movies meet the floor of {floor} in this year ran
 if len(top5) == 0:
     st.info("No movies meet this floor in the current year range. Widen years or lower the floor.")
 else:
-    y_lo = max(0.0, (top5["mean_rating"].min() // 0.5) * 0.5 - 0.5)
+    y_lo = max(0.0, float(top5["mean_rating"].min() // 0.5) * 0.5 - 0.5)
     q4_chart = (
         alt.Chart(top5)
         .mark_bar()
         .encode(
             x=alt.X(
-                "label:N",
+                "title:N",
                 title=None,
                 sort="-y",
-                axis=alt.Axis(labelAngle=-30, labelLimit=220),
+                axis=alt.Axis(
+                    labelAngle=0,
+                    labelAlign="center",
+                    labelBaseline="top",
+                    labelPadding=8,
+                    labelLimit=90,
+                    labelOverlap=False,
+                ),
             ),
             y=alt.Y(
                 "mean_rating:Q",
@@ -240,10 +249,21 @@ else:
                 scale=alt.Scale(zero=False, domain=[y_lo, 5]),
                 axis=alt.Axis(tickMinStep=0.5, format=".1f"),
             ),
-            color=alt.Color("label:N", legend=None, scale=alt.Scale(scheme="tableau10")),
+            color=alt.Color(
+                "label:N",
+                scale=alt.Scale(scheme="tableau10"),
+                legend=alt.Legend(
+                    title="Movie",
+                    orient="bottom",
+                    direction="vertical",
+                    symbolType="square",
+                    columns=1,
+                    labelLimit=400,
+                ),
+            ),
             tooltip=["title", "year", alt.Tooltip("mean_rating:Q", format=".3f"), "n_ratings"],
         )
-        .properties(height=380)
+        .properties(height=380, padding={"bottom": 12})
     )
     st.altair_chart(q4_chart, use_container_width=True)
     table = top5[["title", "year", "mean_rating", "n_ratings"]].reset_index(drop=True)
